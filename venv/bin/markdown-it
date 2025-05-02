@@ -1,4 +1,4 @@
-#!/home/nima-n/Documents/code/password_manager/venv/bin/python3.10
+#!/home/nima/Documents/Code/password-manager-CS-compsec/venv/bin/python3.10
 # -*- coding: utf-8 -*-
 import re
 import sys

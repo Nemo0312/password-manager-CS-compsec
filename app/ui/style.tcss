@@ -1,0 +1,89 @@
+/* General app styling */
+Screen {
+    background: $background;
+    color: $text;
+}
+
+/* Header and Footer */
+Header {
+    background: $primary;
+    color: white;
+    height: 3;
+}
+
+Footer {
+    background: $primary;
+    color: white;
+}
+
+/* Input section styling */
+.input-section {
+    border: hkey $primary;
+    padding: 1;
+    margin: 1;
+    background: $panel;
+}
+
+.section-label {
+    color: $accent;
+    margin-bottom: 1;
+    text-style: bold;
+}
+
+Input {
+    border: tall $secondary;
+    margin-bottom: 1;
+}
+
+Input:focus {
+    border: tall $accent;
+}
+
+/* Button group styling */
+.button-group {
+    layout: horizontal;
+    margin-top: 1;
+}
+
+.action-button {
+    background: $primary;
+    color: white;
+    margin-right: 1;
+    border: none;
+}
+
+.action-button:hover {
+    background: $accent;
+}
+
+/* Table section styling */
+.table-section {
+    margin: 1;
+}
+
+.vault-table {
+    border: hkey $primary;
+    background: $panel;
+    height: 1fr;
+}
+
+.vault-table > *.row--highlight {
+    background: $accent 20%;
+}
+
+.vault-table > *.cursor {
+    background: $accent 40%;
+}
+
+/* Status bar styling */
+.status-bar {
+    background: $secondary;
+    color: white;
+    padding: 1;
+    margin-bottom: 1;
+    text-align: center;
+}
+
+.status-bar.error {
+    background: $error;
+}

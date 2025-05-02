@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /home/nima-n/Documents/code/password_manager/venv
+set -gx VIRTUAL_ENV /home/nima/Documents/Code/password-manager-CS-compsec/venv
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH

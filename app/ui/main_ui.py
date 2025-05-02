@@ -2,33 +2,42 @@ import json
 import pyperclip
 from pathlib import Path
 from textual.app import App, ComposeResult
-from textual.containers import Container
-from textual.widgets import Header, Footer, Input, Button, Static, DataTable
+from textual.containers import Horizontal, Vertical
+from textual.widgets import Header, Footer, Input, Button, Static, DataTable, Label
 from app.crypto.crypto_utils import encrypt, decrypt
 from app.p2p.p2p import share_password, receive_password
 
 VAULT_PATH = Path("app/data/vault.json")
 
 class PasswordManagerApp(App):
-    CSS_PATH = None
-
     def compose(self) -> ComposeResult:
-        yield Header()
-        yield Container(
-            Input(placeholder="Master Password", id="master"),
+        yield Header(show_clock=True)
+        yield Vertical(
+            Label("Vault Entry"),
+            Input(placeholder="Master Password", id="master", password=True),
             Input(placeholder="Service Name", id="service"),
             Input(placeholder="Username", id="username"),
-            Input(placeholder="Password", id="password"),
+            Input(placeholder="Password", id="password", password=True),
+            Horizontal(
+                Button("Save Entry", id="save"),
+                Button("Load Vault", id="load"),
+            ),
+            Label("Share/Receive Password (TLS P2P)"),
             Input(placeholder="Peer IP (default 127.0.0.1)", id="peer_ip"),
             Input(placeholder="Port (default 65432)", id="peer_port"),
-            Button("Save Entry", id="save"),
-            Button("Load Vault", id="load"),
-            Button("Share Entry (TLS P2P)", id="share"),
-            Button("Receive Entry (TLS P2P)", id="receive"),
-            Static("", id="status"),
+            Horizontal(
+                Button("Share Entry", id="share"),
+                Button("Receive Entry", id="receive"),
+            ),
+            Static("App loaded. Click buttons to interact.", id="status"),
             DataTable(id="vault_table"),
         )
         yield Footer()
+
+    def on_mount(self) -> None:
+        table = self.query_one("#vault_table", DataTable)
+        table.cursor_type = "row"
+        table.zebra_stripes = True
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         master = self.query_one("#master", Input).value
@@ -42,19 +51,23 @@ class PasswordManagerApp(App):
                 "username": self.query_one("#username", Input).value,
                 "password": self.query_one("#password", Input).value,
             }
+            if not entry["service"] or not entry["password"]:
+                status.update("[Error] Service and Password are required.")
+                return
             encrypted = encrypt(master, json.dumps(entry))
             data = []
+            VAULT_PATH.parent.mkdir(parents=True, exist_ok=True)
             if VAULT_PATH.exists():
                 with open(VAULT_PATH, "r") as f:
                     data = json.load(f)
             data.append(encrypted)
             with open(VAULT_PATH, "w") as f:
                 json.dump(data, f)
-            status.update("Entry Saved.")
+            status.update("Entry saved successfully.")
 
         elif event.button.id == "load":
             if not VAULT_PATH.exists():
-                status.update("No vault found.")
+                status.update("[Error] No vault found.")
                 return
             with open(VAULT_PATH, "r") as f:
                 data = json.load(f)
@@ -64,7 +77,9 @@ class PasswordManagerApp(App):
                     entry = json.loads(decrypt(master, record))
                     table.add_row(entry["service"], entry["username"], entry["password"])
                 except Exception:
-                    status.update("Decryption failed.")
+                    status.update("[Error] Decryption failed.")
+                    return
+            status.update("Vault loaded successfully.")
 
         elif event.button.id == "share":
             service = self.query_one("#service", Input).value
@@ -79,13 +94,13 @@ class PasswordManagerApp(App):
             })
             try:
                 share_password(payload, host=peer_ip, port=peer_port)
-                status.update(f"Password shared over TLS to {peer_ip}:{peer_port}.")
+                status.update(f"Password shared to {peer_ip}:{peer_port}.")
             except ConnectionRefusedError:
-                status.update(f"Connection refused by {peer_ip}:{peer_port}.")
+                status.update(f"[Error] Connection refused by {peer_ip}:{peer_port}.")
             except TimeoutError:
-                status.update(f"Connection to {peer_ip}:{peer_port} timed out.")
+                status.update(f"[Error] Connection to {peer_ip}:{peer_port} timed out.")
             except Exception as e:
-                status.update(f"Error: {str(e)}")
+                status.update(f"[Error] {str(e)}")
 
         elif event.button.id == "receive":
             port = int(self.query_one("#peer_port", Input).value or 65432)
@@ -97,20 +112,20 @@ class PasswordManagerApp(App):
                         self.query_one("#service", Input).value = entry.get("service", "")
                         self.query_one("#username", Input).value = entry.get("username", "")
                         self.query_one("#password", Input).value = entry.get("password", "")
-                        status.update("Password received securely.")
+                        status.update("Password received successfully.")
                     except json.JSONDecodeError:
-                        status.update("Invalid data received.")
+                        status.update("[Error] Invalid data received.")
                 else:
-                    status.update("No data received.")
+                    status.update("[Error] No data received.")
             except OSError as e:
-                status.update(f"Receive failed: {str(e)}")
+                status.update(f"[Error] Receive failed: {str(e)}")
             except Exception as e:
-                status.update(f"Error: {str(e)}")
+                status.update(f"[Error] {str(e)}")
 
-    def on_data_table_row_highlighted(self, message: DataTable.RowHighlighted) -> None:
+    def on_data_table_row_selected(self, message: DataTable.RowSelected) -> None:
         table = self.query_one("#vault_table", DataTable)
+        status = self.query_one("#status", Static)
         if message.row_key is not None:
             row = table.get_row(message.row_key)
-            pyperclip.copy(row[-1])  # Copy password column
-            self.query_one("#status", Static).update("Password copied to clipboard.")
-
+            pyperclip.copy(row[-1])
+            status.update(f"Password for {row[0]} copied to clipboard.")
